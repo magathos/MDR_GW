@@ -103,7 +103,7 @@ def GComptonWavelength(leffe, redshift, alpha, cosmology):
       print "Cannot handle alpha=2. Exiting..."
       sys.exit(-1)
     else:
-      return leffe/( (LuminosityDistance(redshift, cosmology)/alphaDistance(redshift, cosmology, alpha))**(1.0/(2.0-alpha)) * (1.0+redshift)**((1.0-alpha)/(2.0-alpha)) )
+      return leffe*( LuminosityDistance(redshift, cosmology)/alphaDistance(redshift, cosmology, alpha)*(1.0+redshift)**(1.0-alpha))**(1.0/(2.0-alpha)) 
 
 def GravitonMass(lambda_g):
     """
