@@ -3,7 +3,7 @@
 '''
 Copyright (C) 2015 Michalis Agathos
 
-Lorentz-Violating Dispersion Relation post-processing module for PE 
+Modified Dispersion Relation post-processing module for PE 
 
 '''
 
@@ -85,19 +85,25 @@ def getParams(paramfile):
     recparams = dict(zip(parlist, arange(len(parlist))))
   return recparams
 
-def GComptonWavelength(leffe, redshift, alpha):
+def LCDM_Cosmology(H0=70.0, OmegaM=0.3, OmegaL=0.7):
+  
+  cosmo_dict = {"H0":H0, "OmegaM":OmegaM, "OmegaL":OmegaL, "OmegaK":1.0-OmegaM-OmegaL}
+  return cosmo_dict
+
+def GComptonWavelength(leffe, redshift, alpha, cosmology):
     """
     Calculate Compton wavelength of the graviton in m as:
     l_g * sqrt((1 + (2+z)*(1+z+sqrt(1+z)))/(5*(1+z)^3))
     Valid for \Omega_0 = 1 and for all z.
     """
-    if alpha is 0.0:
+    print alpha
+    if alpha == 0.0:
       return leffe*sqrt((1.0 + (2.0+redshift)*(1.0+redshift+sqrt(1.0+redshift)))/(5.0*(1.0+redshift)**3.0))
-    elif alpha is 2:
+    elif alpha == 2.0:
       print "Cannot handle alpha=2. Exiting..."
       sys.exit(-1)
     else:
-      return leffe/( (LuminosityDistance(redshift, LCDMCosmology())/alphaDistance(redshift, LCDMCosmology(), alpha))**(1.0/(2.0-alpha)) * (1.0+redshift)**((1.0-alpha)/(2.0-alpha)) )
+      return leffe/( (LuminosityDistance(redshift, cosmology)/alphaDistance(redshift, cosmology, alpha))**(1.0/(2.0-alpha)) * (1.0+redshift)**((1.0-alpha)/(2.0-alpha)) )
 
 def GravitonMass(lambda_g):
     """
@@ -107,11 +113,6 @@ def GravitonMass(lambda_g):
     """
 #    return 1.23982e-6/(lambda_g*sqrt((1 + (2+redshift)*(1+redshift+sqrt(1+redshift)))/(5*(1+redshift)**3)))
     return 1.23982e-6/lambda_g
-
-def LCDM_Cosmology(H0=70.0, OmegaM=0.3, OmegaL=0.7):
-  
-  cosmo_dict = {"H0":H0, "OmegaM":OmegaM, "OmegaL":OmegaL, "OmegaK":1.0-OmegaM-OmegaL}
-  return cosmo_dict
 
 
 def HubbleTime(H0):
@@ -173,6 +174,12 @@ def alphaDistance(redshift, cosmology, alpha):
   aD = DH*(1.0+redshift)**(1.0-alpha)*cosmoint[0]
 
   return aD
+
+def Dalpha0_LO(redshift, cosmology):
+  """
+  Leading-order approximation to cosmological distance
+  """
+  return LuminosityDistance(redshift, cosmology)*((1.0 + (2.0+redshift)*(1.0+redshift+sqrt(1.0+redshift)))/(5.0*(1.0+redshift)**2.0))
 
 def LOSComovingDistance(redshift, cosmology):
   """
@@ -398,6 +405,8 @@ if __name__ == "__main__":
   MASSPRIOR = args.mprior
   alphaLIV = args.alphaLIV
 
+  this_cosmology = LCDM_Cosmology()
+
   if not os.path.exists(outfolder):
     os.makedirs(outfolder)
   
@@ -435,8 +444,8 @@ if __name__ == "__main__":
     """Calculating posteriors for lambda_{eff} parameters"""
     if "lambda_eff" in data.dtype.names:
       leffdata = data["lambda_eff"]
-      lameffdata = GComptonWavelength(leffdata, zdata, alphaLIV)
-      if alphaLIV is 0.0:
+      lameffdata = GComptonWavelength(leffdata, zdata, alphaLIV, this_cosmology)
+      if alphaLIV == 0.0:
         mgdata = GravitonMass(lameffdata)
       if MASSPRIOR:
         # apply uniform mass prior
@@ -454,7 +463,7 @@ if __name__ == "__main__":
     if "log10lambda_eff" in data.dtype.names:
       logleffdata = data["log10lambda_eff"]
       leffdata = pow(10, logleffdata)
-      lamgdata = GComptonWavelength(leffdata, zdata, alphaLIV)
+      lamgdata = GComptonWavelength(leffdata, zdata, alphaLIV, this_cosmology)
       loglamgdata = log10(lamgdata)
       if MASSPRIOR:
         # apply uniform mass prior
