@@ -91,7 +91,7 @@ def GComptonWavelength(leffe, redshift, alpha):
     l_g * sqrt((1 + (2+z)*(1+z+sqrt(1+z)))/(5*(1+z)^3))
     Valid for \Omega_0 = 1 and for all z.
     """
-    if alpha = 0.0:
+    if alpha is 0.0:
       return leffe*sqrt((1.0 + (2.0+redshift)*(1.0+redshift+sqrt(1.0+redshift)))/(5.0*(1.0+redshift)**3.0))
     elif alpha is 2:
       print "Cannot handle alpha=2. Exiting..."
