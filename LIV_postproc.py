@@ -107,7 +107,7 @@ def GComptonWavelength(leffe, redshift, alpha, cosmology, LO=False):
     else:
       ld = lambda z:LuminosityDistance(z, cosmology)
       ad = lambda z:alphaDistance(z, cosmology, alpha)
-      return leffe*( array(map(ld, redshift))/array(map(ad, redshift))*(1.0+redshift)**(1.0-alpha))**(1.0/(2.0-alpha)) 
+      return leffe/( array(map(ld, redshift))/array(map(ad, redshift))*(1.0+redshift)**(1.0-alpha))**(1.0/(2.0-alpha)) 
 
 def GravitonMass(lambda_g):
     """
