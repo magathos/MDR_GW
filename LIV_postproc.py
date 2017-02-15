@@ -90,20 +90,24 @@ def LCDM_Cosmology(H0=70.0, OmegaM=0.3, OmegaL=0.7):
   cosmo_dict = {"H0":H0, "OmegaM":OmegaM, "OmegaL":OmegaL, "OmegaK":1.0-OmegaM-OmegaL}
   return cosmo_dict
 
-def GComptonWavelength(leffe, redshift, alpha, cosmology):
+def GComptonWavelength(leffe, redshift, alpha, cosmology, LO=False):
     """
+    TODO: update name/comment for arbitrary alpha
     Calculate Compton wavelength of the graviton in m as:
-    l_g * sqrt((1 + (2+z)*(1+z+sqrt(1+z)))/(5*(1+z)^3))
+    
+    LO: l_g * sqrt((1 + (2+z)*(1+z+sqrt(1+z)))/(5*(1+z)^3))
     Valid for \Omega_0 = 1 and for all z.
     """
     print alpha
-    if alpha == 0.0:
+    if (alpha == 0.0) and LO:
       return leffe*sqrt((1.0 + (2.0+redshift)*(1.0+redshift+sqrt(1.0+redshift)))/(5.0*(1.0+redshift)**3.0))
     elif alpha == 2.0:
       print "Cannot handle alpha=2. Exiting..."
       sys.exit(-1)
     else:
-      return leffe*( LuminosityDistance(redshift, cosmology)/alphaDistance(redshift, cosmology, alpha)*(1.0+redshift)**(1.0-alpha))**(1.0/(2.0-alpha)) 
+      ld = lambda z:LuminosityDistance(z, cosmology)
+      ad = lambda z:alphaDistance(z, cosmology, alpha)
+      return leffe*( array(map(ld, redshift))/array(map(ad, redshift))*(1.0+redshift)**(1.0-alpha))**(1.0/(2.0-alpha)) 
 
 def GravitonMass(lambda_g):
     """
@@ -170,7 +174,7 @@ def alphaDistance(redshift, cosmology, alpha):
 
   Hparam = lambda z:1.0/sqrt(OM*(1+z)**3.0 + OK*(1.0+z)**2.0 + OL)
   integrant = lambda z:(1.0+z)**(alpha-2)/Hparam(z)
-  cosmoint = integrate.quad(integrant, 0, redshift)
+  cosmoint = integrate.quad(integrant, 0.0, redshift)
   aD = DH*(1.0+redshift)**(1.0-alpha)*cosmoint[0]
 
   return aD
