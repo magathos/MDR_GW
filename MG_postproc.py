@@ -370,19 +370,19 @@ if __name__ == "__main__":
 
     logldata = data["logl"]
 
-    """Calculating posteriors for lambda_g parameters"""
-    if "lambda_g" in data.dtype.names:
-      lgdata = data["lambda_g"]
+    """Calculating posteriors for lambda_eff parameters"""
+    if "lambda_eff" in data.dtype.names:
+      lgdata = data["lambda_eff"]
       lamgdata = GComptonWavelength(lgdata, zdata)
       mgdata = GravitonMass(lamgdata)
       figl_hist = plotPosteriorHist(lgdata, xlabel="$l_g$", label=lab)
       figl_kde, kde_lg = plotPosteriorKDE(lgdata, xlabel="$l_g$", label=lab)
-      figlam_hist = plotPosteriorHist(lamgdata, xlabel="$\lambda_g$", label=lab)
-      figlam_kde, kde_lamg = plotPosteriorKDE(lamgdata, xlabel="$\lambda_g$", label=lab)
+      figlam_hist = plotPosteriorHist(lamgdata, xlabel="$\lambda_eff$", label=lab)
+      figlam_kde, kde_lamg = plotPosteriorKDE(lamgdata, xlabel="$\lambda_eff$", label=lab)
       figm_hist = plotPosteriorHist(mgdata, xlabel="$m_g$", label=lab)
       figm_kde, kde_mg = plotPosteriorKDE(mgdata, xlabel="$m_g$", label=lab)
-    elif "loglambda_g" in data.dtype.names:
-      loglgdata = array(data["loglambda_g"])
+    elif "loglambda_eff" in data.dtype.names:
+      loglgdata = array(data["loglambda_eff"])
       lgdata = pow(10, loglgdata)
       lamgdata = GComptonWavelength(lgdata, zdata)
       loglamgdata = log10(lamgdata)
@@ -404,9 +404,9 @@ if __name__ == "__main__":
       print "Plotting lambdag"
     #    figlam_hist = plotPosteriorHist(lamgdata, logplot=True, xmin=1e13, xmax=1e20, label=lab)
       figlam_hist = plotPosteriorHist(lamgdata, logplot=True, nbins=100, xmin=1e13, xmax=max(lamgdata), label=lab)
-      figlam_hist.gca().set_xlabel("$\lambda_g \, [m]$")
+      figlam_hist.gca().set_xlabel("$\lambda_eff \, [m]$")
       figlam_kde, kde_lamg = plotPosteriorKDE(loglamgdata, xmin=13, xmax=20, label=lab)
-      figlam_kde.gca().set_xlabel("$\log_{10}\lambda_g \, [m]$")
+      figlam_kde.gca().set_xlabel("$\log_{10}\lambda_eff \, [m]$")
       for lb in lambdag_bounds:
         (bound, lc, ls) = lambdag_bounds[lb]
         figlam_hist.gca().axvline(bound, linestyle=ls, linewidth=3, color=lc, label=lb)
@@ -429,8 +429,8 @@ if __name__ == "__main__":
 
     figlam_hist.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
     figlam_kde.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
-    figlam_hist.savefig(os.path.join(outfolder, "lambda_g_hist_"+lab+".png"), bbox_inches='tight')
-    figlam_kde.savefig(os.path.join(outfolder, "lambda_g_KDE_"+lab+".png"), bbox_inches='tight')
+    figlam_hist.savefig(os.path.join(outfolder, "lambda_eff_hist_"+lab+".png"), bbox_inches='tight')
+    figlam_kde.savefig(os.path.join(outfolder, "lambda_eff_KDE_"+lab+".png"), bbox_inches='tight')
     
     figm_hist.gca().legend(loc='upper right', fancybox=True, framealpha=0.8)
     figm_kde.gca().legend(loc='upper right', fancybox=True, framealpha=0.8)
@@ -442,7 +442,7 @@ if __name__ == "__main__":
     figll = figure()
     axll = figll.add_subplot(111)
     axll.scatter(loglgdata, logldata)
-    axll.set_xlabel("$\log\lambda_g$")
+    axll.set_xlabel("$\log\lambda_eff$")
     axll.set_ylabel("$\log L$")
     figll.savefig(os.path.join(outfolder, "lambda_L_"+lab+".png"), bbox_inches='tight')
     
@@ -468,7 +468,7 @@ if __name__ == "__main__":
   lamgprior = lambda l,lmin,lmax: 1.0/(lmax-lmin)
   lamgpriormg = lambda l,lmin,lmax: (lmax-lmin)/(l*lmax*lmin)
 
-  # Prior uniform in loglambda_g
+  # Prior uniform in loglambda_eff
   y = lamgprior(x, xmin, xmax)
   # Prior uniform in m_g
   yp = lamgpriormg(pow(10.0,x), pow(10.0,xmin), pow(10.0,xmax))
@@ -490,8 +490,8 @@ if __name__ == "__main__":
   ax_combined_lamgp.grid(color='grey', linestyle='--', linewidth=0.3, alpha=0.8)
   ax_combined_lamg.set_ylabel("PDF / CDF")
   ax_combined_lamgp.set_ylabel("PDF / CDF")
-  ax_combined_lamg.set_xlabel("$\log_{10}\lambda_g \, [m]$")
-  ax_combined_lamgp.set_xlabel("$\log_{10}\lambda_g \, [m]$")
+  ax_combined_lamg.set_xlabel("$\log_{10}\lambda_eff \, [m]$")
+  ax_combined_lamgp.set_xlabel("$\log_{10}\lambda_eff \, [m]$")
 
   kdemax = max(y)
   from scipy.integrate import cumtrapz
@@ -517,8 +517,8 @@ if __name__ == "__main__":
 
   fig_combined_lamg.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
   fig_combined_lamgp.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
-  fig_combined_lamg.savefig(os.path.join(outfolder, "combined_lambda_g.png"), bbox_inches='tight')
-  fig_combined_lamgp.savefig(os.path.join(outfolder, "combined_lambda_g_mgprior.png"), bbox_inches='tight')
+  fig_combined_lamg.savefig(os.path.join(outfolder, "combined_lambda_eff.png"), bbox_inches='tight')
+  fig_combined_lamgp.savefig(os.path.join(outfolder, "combined_lambda_eff_mgprior.png"), bbox_inches='tight')
 
 
   print "DONE!"

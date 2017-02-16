@@ -422,18 +422,23 @@ if __name__ == "__main__":
   kdelist_lg=[]
   kdelist_lamg=[]
   kdelist_mg=[]
+
   print datafiles
   for (dfile, lab) in zip(datafiles, labels):
-    h5file = h5py.File(dfile, 'r') 
-    ns = h5file['lalinference']['lalinference_nest']['posterior_samples']
-    data = array(ns[()])
-
-
+    if os.path.splitext(dfile)[1] is '.hdf5':
+      h5file = h5py.File(dfile, 'r') 
+      ns = h5file['lalinference']['lalinference_nest']['posterior_samples']
+      data = array(ns[()])
+    else:
+      if os.path.splitext(dfile)[1] is not '.dat':
+        print 'WARNING: data format seems to be incompatible...'
+      data = genfromtxt(dfile, names=True)
+      
     """Converting (log)distance posterior to meters"""
-    if "logdistance" in ns.attrs.values():
+    if "logdistance" in data.dtype.names:
       distdata = exp(data["logdistance"]) * 1e6 * pc_SI
       print "Logarithmic distance parameter detected."
-    elif "distance" in ns.attrs.values():
+    elif "distance" in data.dtype.names:
       distdata = data["distance"] * 1e6 * pc_SI
       print "Linear distance parameter detected."
     else:
@@ -446,42 +451,65 @@ if __name__ == "__main__":
     logldata = data["logL"]
 
     """Calculating posteriors for lambda_{eff} parameters"""
-    if "lambda_eff" in data.dtype.names:
+    if "log10lambda_a" in data.dtype.names:
+      loglamAdata = data["log10lambda_a"]
+      lamAdata = pow(10, loglamAdata)
+    elif "lambda_a" in data.dtype.names:
+      lamAdata = data["lambda_a"]
+      loglamAdata = log10(lamAdata)
+    elif "lambda_eff" in data.dtype.names:
       leffdata = data["lambda_eff"]
-      lameffdata = GComptonWavelength(leffdata, zdata, alphaLIV, this_cosmology)
-      if alphaLIV == 0.0:
-        mgdata = GravitonMass(lameffdata)
-      if MASSPRIOR:
-        # apply uniform mass prior
-        print "Weighing posterior points by 1/\lambda_{eff}^2"
-        weights = 1.0/lameffdata**2
-      else:
-        weights = None
-      figl_hist = plotPosteriorHist(leffdata, xlabel="$l_{eff}$", label=lab, weights=weights)
-      figl_kde, kde_leff = plotPosteriorKDE(leffdata, xlabel="$l_{eff}$", label=lab)
-      figlam_hist = plotPosteriorHist(lameffdata, xlabel="$\lambda_{eff}$", label=lab, weights=weights)
-      figlam_kde, kde_lameff = plotPosteriorKDE(lameffdata, xlabel="$\lambda_{eff}$", label=lab)
-      figm_hist = plotPosteriorHist(mgdata, xlabel="$m_g$", label=lab, weights=weights)
-      figm_kde, kde_mg = plotPosteriorKDE(mgdata, xlabel="$m_g$", label=lab)
-
-    if "log10lambda_eff" in data.dtype.names:
+      logleffdata = log10(leffdata)
+      lamAdata = GComptonWavelength(leffdata, zdata, alphaLIV, this_cosmology)
+      lameff = True
+    elif "log10lambda_eff" in data.dtype.names:
       logleffdata = data["log10lambda_eff"]
       leffdata = pow(10, logleffdata)
-      lamgdata = GComptonWavelength(leffdata, zdata, alphaLIV, this_cosmology)
-      loglamgdata = log10(lamgdata)
-      if MASSPRIOR:
+      lamAdata = GComptonWavelength(leffdata, zdata, alphaLIV, this_cosmology)
+      loglamAdata = log10(lamAdata)
+      lameff = True
+    if alphaLIV == 0.0:
+        mgdata = GravitonMass(lamAdata)
+    if MASSPRIOR:
         # apply uniform mass prior
-        print "Weighing posterior points by 1/\lambda_{eff}"
-        weights = 1.0/leffdata
-      else:
+        print "Weighing posterior points by 1/\lambda_\mathbb{A}^2"
+        print "TODO: Update for arbitrary values of alpha!"
+        weights = 1.0/lamAdata**2
+        logweights = 1.0/lamAdata
+    else:
         weights = None
-      savetxt(os.path.join(outfolder, "lamda_eff_posteriors.dat"), lamgdata)
-      savetxt(os.path.join(outfolder, "loglamda_eff_posteriors.dat"), loglamgdata)
-      mgdata = GravitonMass(lamgdata)
-      logmgdata = log10(mgdata)
+        logweights = None
+    figlamA_hist = plotPosteriorHist(lamAdata, xlabel="$\lambda_\mathbb{A}$", label=lab, weights=weights)
+    figlamA_kde, kde_lamA = plotPosteriorKDE(lamAdata, xlabel="$\lambda_\mathbb{A}$", label=lab)
 
-      print "Plotting lg"
-      figl_hist = plotPosteriorHist(leffdata, logplot=True, xmin=1e13, xmax=1e20, label=lab, weights=weights)
+    #      figl_hist = plotPosteriorHist(leffdata, xlabel="$l_{eff}$", label=lab, weights=weights)
+    #      figl_kde, kde_leff = plotPosteriorKDE(leffdata, xlabel="$l_{eff}$", label=lab)
+    #      figm_hist = plotPosteriorHist(mgdata, xlabel="$m_g$", label=lab, weights=weights)
+    #      figm_kde, kde_mg = plotPosteriorKDE(mgdata, xlabel="$m_g$", label=lab)
+    savetxt(os.path.join(outfolder, "lamda_A_posteriors.dat"), lamAdata)
+    savetxt(os.path.join(outfolder, "loglamda_A_posteriors.dat"), loglamAdata)
+    mgdata = GravitonMass(lamAdata)
+    logmgdata = log10(mgdata)
+
+    print "Plotting lambda_A"
+    #    figlam_hist = plotPosteriorHist(lamAdata, logplot=True, xmin=1e13, xmax=1e20, label=lab)
+    figlam_hist = plotPosteriorHist(lamAdata, logplot=True, nbins=100, xmin=1e13, xmax=max(lamAdata), label=lab, weights=logweights)
+    figlam_hist.gca().set_xlabel("$\lambda_\mathbb{A} \, [m]$")
+    figlam_kde, kde_lamg = plotPosteriorKDE(loglamAdata, xmin=13, xmax=20, label=lab)
+    figlam_kde.gca().set_xlabel("$\log_{10}\lambda_g \, [m]$")
+    for lb in lambdag_bounds:
+      (bound, lc, ls) = lambdag_bounds[lb]
+      figlam_hist.gca().axvline(bound, linestyle=ls, linewidth=3, color=lc, label=lb)
+      figlam_kde.gca().axvline(log10(bound), linestyle=ls, linewidth=3, color=lc, label=lb)
+
+    figlam_hist.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
+    figlam_kde.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
+    figlam_hist.savefig(os.path.join(outfolder, "lambda_g_hist_"+lab+".png"), bbox_inches='tight')
+    figlam_kde.savefig(os.path.join(outfolder, "lambda_g_KDE_"+lab+".png"), bbox_inches='tight')
+
+    if lameff:
+      print "Plotting lambda_eff"
+      figl_hist = plotPosteriorHist(leffdata, logplot=True, xmin=1e13, xmax=1e20, label=lab, weights=logweights)
       figl_hist.gca().set_xlabel("$l_{eff} \, [m]$")
       figl_kde, kde_leff = plotPosteriorKDE(logleffdata, xmin=13, xmax=20, label=lab)
       figl_kde.gca().set_xlabel("$\log_{10}l_{eff} \, [m]$")
@@ -490,17 +518,12 @@ if __name__ == "__main__":
         figl_hist.gca().axvline(bound, linestyle=ls, linewidth=3, color=lc, label=lb)
         figl_kde.gca().axvline(log10(bound), linestyle=ls, linewidth=3, color=lc, label=lb)
       
-      print "Plotting lambdag"
-    #    figlam_hist = plotPosteriorHist(lamgdata, logplot=True, xmin=1e13, xmax=1e20, label=lab)
-      figlam_hist = plotPosteriorHist(lamgdata, logplot=True, nbins=100, xmin=1e13, xmax=max(lamgdata), label=lab, weights=weights)
-      figlam_hist.gca().set_xlabel("$\lambda_g \, [m]$")
-      figlam_kde, kde_lamg = plotPosteriorKDE(loglamgdata, xmin=13, xmax=20, label=lab)
-      figlam_kde.gca().set_xlabel("$\log_{10}\lambda_g \, [m]$")
-      for lb in lambdag_bounds:
-        (bound, lc, ls) = lambdag_bounds[lb]
-        figlam_hist.gca().axvline(bound, linestyle=ls, linewidth=3, color=lc, label=lb)
-        figlam_kde.gca().axvline(log10(bound), linestyle=ls, linewidth=3, color=lc, label=lb)
+      figl_hist.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
+      figl_kde.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
+      figl_hist.savefig(os.path.join(outfolder, "l_g_hist_"+lab+".png"), bbox_inches='tight')
+      figl_kde.savefig(os.path.join(outfolder, "l_g_KDE_"+lab+".png"), bbox_inches='tight')
 
+    if alphaLIV == 0.0
       print "Plotting mg"
       figm_hist = plotPosteriorHist(mgdata, logplot=True, label=lab, weights=weights)
       figm_hist.gca().set_xlabel("$m_g \, [eV/c^2]$")
@@ -511,15 +534,7 @@ if __name__ == "__main__":
         figm_hist.gca().axvline(GravitonMass(bound), linestyle=ls, linewidth=3, color=lc, label=lb)
         figm_kde.gca().axvline(log10(GravitonMass(bound)), linestyle=ls, linewidth=3, color=lc, label=lb)
 
-    figl_hist.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
-    figl_kde.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
-    figl_hist.savefig(os.path.join(outfolder, "l_g_hist_"+lab+".png"), bbox_inches='tight')
-    figl_kde.savefig(os.path.join(outfolder, "l_g_KDE_"+lab+".png"), bbox_inches='tight')
 
-    figlam_hist.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
-    figlam_kde.gca().legend(loc='upper left', fancybox=True, framealpha=0.8)
-    figlam_hist.savefig(os.path.join(outfolder, "lambda_g_hist_"+lab+".png"), bbox_inches='tight')
-    figlam_kde.savefig(os.path.join(outfolder, "lambda_g_KDE_"+lab+".png"), bbox_inches='tight')
     
     figm_hist.gca().legend(loc='upper right', fancybox=True, framealpha=0.8)
     figm_kde.gca().legend(loc='upper right', fancybox=True, framealpha=0.8)
